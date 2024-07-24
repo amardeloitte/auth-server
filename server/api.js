@@ -2,6 +2,7 @@ const express = require("express");
 const fs = require("fs");
 const router = express.Router();
 const bookListData = require("./book-list");
+const jwt = require("jsonwebtoken");
 
 router.post("/register", (req, res) => {
     let userData = req.body;
@@ -27,7 +28,11 @@ router.post("/register", (req, res) => {
                 res.send("Error: ", err);
                 return;
             }
-            res.send("User data saved successfully!")
+            let payload = {
+                subject: userData.email
+            }
+            let token = jwt.sign(payload, "test");
+            res.send({token});
         })
     });
 });
@@ -54,13 +59,32 @@ router.post("/login", (req, res) => {
             res.send("Incorrect password!");
             return;
         }
-        res.send('User found!');
+        let payload = {
+            subject: userData.email
+        }
+        let token = jwt.sign(payload, "test");
+        res.send({token});
     });
 });
 
-router.get("/bookList", (req, res) => {
+router.get("/bookList", verifyToken, (req, res) => {
     const data = bookListData;
     res.json(data);
 });
+
+function verifyToken(req, res, next) {
+    if(!req.headers.authorization) {
+        res.send("Unauthorized request!");
+    }
+    let token = req.headers.authorization.split(" ")[1];
+    if(token === 'null') {
+        res.send("Unauthorized request!");
+    }
+    let payload = jwt.verify(token, "test");
+    if(!payload) {
+        res.send("Unauthorized request!");
+    }
+    next();
+}
 
 module.exports = router;
